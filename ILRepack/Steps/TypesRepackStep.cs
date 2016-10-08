@@ -176,17 +176,18 @@ namespace ILRepacking.Steps
             List<TypeDefinition> typeDefinitions = new List<TypeDefinition>();
 
             foreach (var m in _repackContext.OtherAssemblies.SelectMany(x => x.Modules))
-            {
                 typeDefinitions.AddRange(m.Types);
-            }
 
-            HashSet<string> restrictedTypeNames = new HashSet<string>(typeDefinitions.Select(x => x.FullName));
+            HashSet<string> whitelistedTypeNames = new HashSet<string>(typeDefinitions.Select(x => x.FullName));
 
             foreach (var typeDefinition in typeDefinitions)
             {
                 if (!ShouldInternalize(typeDefinition.FullName) && exposedTypeNames.Add(typeDefinition.FullName))
-                    GetExposedTypes(exposedTypeNames, restrictedTypeNames, typeDefinition);
+                    GetExposedTypes(exposedTypeNames, whitelistedTypeNames, typeDefinition);
             }
+
+            foreach (var typeDefinition in _repackContext.PrimaryAssemblyDefinition.Modules.SelectMany(x => x.Types))
+                GetExposedTypes(exposedTypeNames, whitelistedTypeNames, typeDefinition);
         }
 
         private void GetExposedTypes(HashSet<string> exposedTypeNames, HashSet<string> whitelistedTypeNames, TypeReference reference)
