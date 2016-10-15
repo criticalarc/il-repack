@@ -53,6 +53,15 @@ namespace ILRepacking.Steps
                 if (!_repackOptions.DelaySign)
                     KeyPair = snkp;
             }
+            else if (!string.IsNullOrEmpty(_repackOptions.KeyContainer))
+            {
+                var snkp = new StrongNameKeyPair(_repackOptions.KeyContainer);
+                _repackContext.TargetAssemblyDefinition.Name.PublicKey = snkp.PublicKey;
+                _repackContext.TargetAssemblyDefinition.Name.Attributes |= AssemblyAttributes.PublicKey;
+                _repackContext.TargetAssemblyMainModule.Attributes |= ModuleAttributes.StrongNameSigned;
+                if (!_repackOptions.DelaySign)
+                    KeyPair = snkp;
+            }
             else
             {
                 _repackContext.TargetAssemblyDefinition.Name.PublicKey = null;
