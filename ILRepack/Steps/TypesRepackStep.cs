@@ -78,53 +78,92 @@ namespace ILRepacking.Steps
 
             if (definition.BaseType != null)
             {
-                if (whitelistedTypeNames.Contains(definition.BaseType.FullName))
-                {
-                    yield return definition.BaseType;
+                TypeReference type = definition.BaseType;
 
-                    foreach (var baseType in GetExposedTypes(definition.BaseType, whitelistedTypeNames))
+                if (type.IsGenericInstance)
+                {
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var baseType in GetExposedTypes(type, whitelistedTypeNames))
                         yield return baseType;
-                }
 
-                if (definition.BaseType.IsGenericInstance)
-                {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType) definition.BaseType, whitelistedTypeNames))
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                    {
+                        yield return type;
+
+                        foreach (var baseType in GetExposedTypes(type, whitelistedTypeNames))
+                            yield return baseType;
+                    }
                 }
             }
 
             foreach (var iface in definition.Interfaces)
             {
-                if (whitelistedTypeNames.Contains(iface.FullName))
-                    yield return iface;
+                TypeReference type = iface;
 
-                if (iface.IsGenericInstance)
+                if (type.IsGenericInstance)
                 {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType)iface, whitelistedTypeNames))
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                        yield return type;
                 }
             }
 
             foreach (var method in definition.Methods.Where(x => x.IsPublic))
             {
-                if (whitelistedTypeNames.Contains(method.ReturnType.FullName))
-                    yield return method.ReturnType;
+                TypeReference type = method.ReturnType;
 
-                if (method.ReturnType.IsGenericInstance)
+                if (type.IsGenericInstance)
                 {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType)method.ReturnType, whitelistedTypeNames))
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                        yield return type;
                 }
 
                 foreach (var param in method.Parameters)
                 {
-                    if (whitelistedTypeNames.Contains(param.ParameterType.FullName))
-                        yield return param.ParameterType;
+                    TypeReference paramType = param.ParameterType;
 
-                    if (param.ParameterType.IsGenericInstance)
+                    if (paramType.IsGenericInstance)
                     {
-                        foreach (var argument in GetExposedGenericArguments((GenericInstanceType)param.ParameterType, whitelistedTypeNames))
+                        GenericInstanceType genericInstance = (GenericInstanceType)paramType;
+
+                        if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                            yield return genericInstance.ElementType;
+
+                        foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                             yield return argument;
+                    }
+                    else
+                    {
+                        if (whitelistedTypeNames.Contains(paramType.FullName))
+                            yield return paramType;
                     }
                 }
             }
@@ -133,26 +172,44 @@ namespace ILRepacking.Steps
             {
                 if (prop.GetMethod != null && prop.GetMethod.IsPublic)
                 {
-                    if (whitelistedTypeNames.Contains(prop.GetMethod.ReturnType.FullName))
-                        yield return prop.GetMethod.ReturnType;
+                    TypeReference type = prop.GetMethod.ReturnType;
 
-                    if (prop.GetMethod.ReturnType.IsGenericInstance)
+                    if (type.IsGenericInstance)
                     {
-                        foreach (var argument in GetExposedGenericArguments((GenericInstanceType)prop.GetMethod.ReturnType, whitelistedTypeNames))
+                        GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                        if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                            yield return genericInstance.ElementType;
+
+                        foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                             yield return argument;
+                    }
+                    else
+                    {
+                        if (whitelistedTypeNames.Contains(type.FullName))
+                            yield return type;
                     }
                 }
                 else if (prop.SetMethod != null && prop.SetMethod.IsPublic)
                 {
                     foreach (var param in prop.SetMethod.Parameters)
                     {
-                        if (whitelistedTypeNames.Contains(param.ParameterType.FullName))
-                            yield return param.ParameterType;
+                        TypeReference type = param.ParameterType;
 
-                        if (param.ParameterType.IsGenericInstance)
+                        if (type.IsGenericInstance)
                         {
-                            foreach (var argument in GetExposedGenericArguments((GenericInstanceType) param.ParameterType, whitelistedTypeNames))
+                            GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                            if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                                yield return genericInstance.ElementType;
+
+                            foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                                 yield return argument;
+                        }
+                        else
+                        {
+                            if (whitelistedTypeNames.Contains(type.FullName))
+                                yield return type;
                         }
                     }
                 }
@@ -160,13 +217,22 @@ namespace ILRepacking.Steps
 
             foreach (var field in definition.Fields.Where(x => x.IsPublic))
             {
-                if (whitelistedTypeNames.Contains(field.FieldType.FullName))
-                    yield return field.FieldType;
+                TypeReference type = field.FieldType;
 
-                if (field.FieldType.IsGenericInstance)
+                if (type.IsGenericInstance)
                 {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType)field.FieldType, whitelistedTypeNames))
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                        yield return type;
                 }
             }
         }
