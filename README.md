@@ -1,4 +1,4 @@
-[![Build status](https://img.shields.io/appveyor/ci/gluck/il-repack.svg?label=build windows)](https://ci.appveyor.com/project/gluck/il-repack) [![Build Status](https://img.shields.io/travis/gluck/il-repack.svg?label=build linux)](https://travis-ci.org/gluck/il-repack) [![NuGet](https://img.shields.io/nuget/dt/ILRepack.svg)](https://www.nuget.org/packages/ILRepack/) [![NuGet](https://img.shields.io/nuget/v/ILRepack.svg)](https://www.nuget.org/packages/ILRepack/) [![GitHub license](https://img.shields.io/github/license/gluck/il-repack.svg)](http://www.apache.org/licenses/LICENSE-2.0)   
+[![Build status](https://img.shields.io/appveyor/ci/gluck/il-repack.svg?label=build windows)](https://ci.appveyor.com/project/gluck/il-repack) [![Build Status](https://img.shields.io/travis/gluck/il-repack.svg?label=build linux)](https://travis-ci.org/gluck/il-repack) [![NuGet](https://img.shields.io/nuget/v/ILRepack.svg)](https://www.nuget.org/packages/ILRepack/) [![GitHub license](https://img.shields.io/github/license/gluck/il-repack.svg)](http://www.apache.org/licenses/LICENSE-2.0)   
 [![Gitter chat](https://img.shields.io/badge/gitter-join%20chat-green.svg)](https://gitter.im/gluck/il-repack)
 
 Introduction
@@ -22,38 +22,39 @@ Or if you're old-school (and want to stay like that), this [direct link](http://
 Syntax
 ------
 
-A console application has been released (can be used as DLL as well), using same syntax as ILMerge:
+A console application is available (can be used as DLL as well), using same syntax as ILMerge:
 ```
 Syntax: ILRepack.exe [options] /out:<path> <path_to_primary> [<other_assemblies> ...]
 
-  - /help              displays this usage
- - /keyfile:<path>    specifies a keyfile to sign the output assembly
- - /log:<logfile>     enable logging (to a file, if given) (default is disabled)
- - /ver:M.X.Y.Z       target assembly version
- - /union             merges types with identical names into one
- - /ndebug            disables symbol file generation
- - /copyattrs         copy assembly attributes (by default only the primary assembly attributes are copied)
- - /attr:<path>       take assembly attributes from the given assembly file
- - /allowMultiple     when copyattrs is specified, allows multiple attributes (if type allows)
- - /target:kind       specify target assembly kind (library, exe, winexe supported, default is same as first assembly)
- - /targetplatform:P  specify target platform (v1, v1.1, v2, v4 supported)
- - /xmldocs           merges XML documentation as well
- - /lib:<path>        adds the path to the search directories for referenced assemblies (can be specified multiple times)
- - /internalize       sets all types but the ones from the first assembly 'internal'
- - /delaysign         sets the key, but don't sign the assembly
+ - /help                displays this usage
+ - /keyfile:<path>      specifies a keyfile to sign the output assembly
+ - /keycontainer:<name> specifies a key container to sign the output assembly (takes precedence over /keyfile)
+ - /log:<logfile>       enable logging (to a file, if given) (default is disabled)
+ - /ver:M.X.Y.Z         target assembly version
+ - /union               merges types with identical names into one
+ - /ndebug              disables symbol file generation
+ - /copyattrs           copy assembly attributes (by default only the primary assembly attributes are copied)
+ - /attr:<path>         take assembly attributes from the given assembly file
+ - /allowMultiple       when copyattrs is specified, allows multiple attributes (if type allows)
+ - /target:kind         specify target assembly kind (library, exe, winexe supported, default is same as first assembly)
+ - /targetplatform:P    specify target platform (v1, v1.1, v2, v4 supported)
+ - /xmldocs             merges XML documentation as well
+ - /lib:<path>          adds the path to the search directories for referenced assemblies (can be specified multiple times)
+ - /internalize         sets all types but the ones from the first assembly 'internal'
+ - /delaysign           sets the key, but don't sign the assembly
  - /usefullpublickeyforreferences - NOT IMPLEMENTED
- - /align             - NOT IMPLEMENTED
- - /closed            - NOT IMPLEMENTED
- - /allowdup:Type     allows the specified type for being duplicated in input assemblies
+ - /align               - NOT IMPLEMENTED
+ - /closed              - NOT IMPLEMENTED
+ - /allowdup:Type       allows the specified type for being duplicated in input assemblies
  - /allowduplicateresources allows to duplicate resources in output assembly (by default they're ignored)
- - /zeropekind        allows assemblies with Zero PeKind (but obviously only IL will get merged)
- - /wildcards         allows (and resolves) file wildcards (e.g. `*`.dll) in input assemblies
- - /parallel          use as many CPUs as possible to merge the assemblies
- - /pause             pause execution once completed (good for debugging)
- - /verbose           shows more logs
- - /out:<path>        target assembly path, symbol/config/doc files will be written here as well
- - <path_to_primary>  primary assembly, gives the name, version to the merged one
- - <other_assemblies> ...
+ - /zeropekind          allows assemblies with Zero PeKind (but obviously only IL will get merged)
+ - /wildcards           allows (and resolves) file wildcards (e.g. `*`.dll) in input assemblies
+ - /parallel            use as many CPUs as possible to merge the assemblies
+ - /pause               pause execution once completed (good for debugging)
+ - /verbose             shows more logs
+ - /out:<path>          target assembly path, symbol/config/doc files will be written here as well
+ - <path_to_primary>    primary assembly, gives the name, version to the merged one
+ - <other_assemblies>   ...
 
 Note: for compatibility purposes, all options can be specified using '/', '-' or '--' prefix.
 ```
@@ -61,7 +62,7 @@ Note: for compatibility purposes, all options can be specified using '/', '-' or
 How to build
 ------
 
-Builds directly from within VS, or using gradle:
+Builds directly from within Visual Studio 2015, or using gradle:
 
 ```
 git clone --recursive https://github.com/gluck/il-repack.git

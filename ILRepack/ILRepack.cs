@@ -240,16 +240,13 @@ namespace ILRepacking
             return repackAssemblyNames?.FirstOrDefault(name => name.Name == repackedAssemblyName) ?? fallbackType.Assembly.GetName();
         }
 
-        void PrintRepackVersion()
+        void PrintRepackHeader()
         {
             var assemblies = GetRepackAssemblyNames(typeof(ILRepack));
             var ilRepack = GetRepackAssemblyName(assemblies, "ILRepack", typeof(ILRepack));
             Logger.Info($"IL Repack - Version {ilRepack.Version.ToString(3)}");
             Logger.Verbose($"Runtime: {typeof(ILRepack).Assembly.FullName}");
-            foreach (var asb in assemblies)
-            {
-                Logger.Verbose($" - {asb.FullName}");
-            }
+            Logger.Info(Options.ToCommandLine());
         }
 
         /// <summary>
@@ -261,7 +258,7 @@ namespace ILRepacking
             var timer = new Stopwatch();
             timer.Start();
             Options.Validate();
-            PrintRepackVersion();
+            PrintRepackHeader();
             _reflectionHelper = new ReflectionHelper(this);
             ResolveSearchDirectories();
 
@@ -319,6 +316,7 @@ namespace ILRepacking
 
             _lineIndexer = new IKVMLineIndexer(this, Options.LineIndexation);
             var signingStep = new SigningStep(this, Options);
+            var isUnixEnvironment = Environment.OSVersion.Platform == PlatformID.MacOSX || Environment.OSVersion.Platform == PlatformID.Unix;
             var sourceServerDataRepackStep = new SourceServerDataRepackStep(Options.OutputFile, MergedAssemblyFiles);
 
             List<IRepackStep> repackSteps = new List<IRepackStep>
@@ -330,8 +328,9 @@ namespace ILRepacking
                 new AttributesRepackStep(Logger, this, _repackImporter, Options),
                 new ReferencesFixStep(Logger, this, _repackImporter, Options),
                 new XamlResourcePathPatcherStep(Logger, this),
-                sourceServerDataRepackStep
             };
+            if (!isUnixEnvironment)
+                repackSteps.Add(sourceServerDataRepackStep);
 
             foreach (var step in repackSteps)
             {
@@ -351,11 +350,15 @@ namespace ILRepacking
                 Directory.CreateDirectory(outputDir);
             }
             TargetAssemblyDefinition.Write(Options.OutputFile, parameters);
-            sourceServerDataRepackStep.Write();
+            if (!isUnixEnvironment)
+                sourceServerDataRepackStep.Write();
+            else
+                Logger.Warn("Did not write source server data to output assembly. " +
+                            "Source server data is only writeable on Windows");
             Logger.Info("Writing output assembly to disk");
             // If this is an executable and we are on linux/osx we should copy file permissions from
             // the primary assembly
-            if (Environment.OSVersion.Platform == PlatformID.MacOSX || Environment.OSVersion.Platform == PlatformID.Unix)
+            if (isUnixEnvironment)
             {
                 Stat stat;
                 Logger.Info("Copying permissions from " + PrimaryAssemblyFile);
