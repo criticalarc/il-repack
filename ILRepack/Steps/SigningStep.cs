@@ -40,13 +40,29 @@ namespace ILRepacking.Steps
 
         public void Perform()
         {
-            if (_repackOptions.KeyFile != null && File.Exists(_repackOptions.KeyFile))
+            if (_repackOptions.KeyContainer != null || (_repackOptions.KeyFile != null && File.Exists(_repackOptions.KeyFile)))
             {
                 var snkp = default(StrongNameKeyPair);
-                using (var stream = new FileStream(_repackOptions.KeyFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+                if (_repackOptions.KeyContainer != null)
                 {
-                    snkp = new StrongNameKeyPair(stream);
+                    snkp = new StrongNameKeyPair(_repackOptions.KeyContainer);
                 }
+                else
+                {
+                    using (var stream = new FileStream(_repackOptions.KeyFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        snkp = new StrongNameKeyPair(stream);
+                    }
+                }
+                _repackContext.TargetAssemblyDefinition.Name.PublicKey = snkp.PublicKey;
+                _repackContext.TargetAssemblyDefinition.Name.Attributes |= AssemblyAttributes.PublicKey;
+                _repackContext.TargetAssemblyMainModule.Attributes |= ModuleAttributes.StrongNameSigned;
+                if (!_repackOptions.DelaySign)
+                    KeyPair = snkp;
+            }
+            else if (!string.IsNullOrEmpty(_repackOptions.KeyContainer))
+            {
+                var snkp = new StrongNameKeyPair(_repackOptions.KeyContainer);
                 _repackContext.TargetAssemblyDefinition.Name.PublicKey = snkp.PublicKey;
                 _repackContext.TargetAssemblyDefinition.Name.Attributes |= AssemblyAttributes.PublicKey;
                 _repackContext.TargetAssemblyMainModule.Attributes |= ModuleAttributes.StrongNameSigned;

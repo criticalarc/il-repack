@@ -13,8 +13,7 @@ archivesBaseName = 'ILRepack'
 defaultTasks('nugetPack')
 
 nuget {
-    // oh boy, version 3.3.0 seems to freeze during restore on linux ... rollbacking.... again
-    version = '2.8.6'
+    version = '3.5.0'
 }
 
 assemblyInfoPatcher {
@@ -44,7 +43,7 @@ nunitLongRunning.dependsOn msbuild
 ext.repackList = ['ILRepack.exe', 'Fasterflect.dll', 'BamlParser.dll', 'Mono.Cecil.dll', 'Mono.Cecil.Mdb.dll', 'Mono.Cecil.Pdb.dll', 'Mono.Posix.dll']
 
 // repacking of all dependencies in a single exe
-task repack(dependsOn: [msbuild, nunitLongRunning]) {
+task repack(dependsOn: [msbuild]) {
     inputs.files {
         def workingDir = msbuild.mainProject.getProjectPropertyPath('OutputPath')
         return project.ext.repackList.collect { new File(workingDir, it) }

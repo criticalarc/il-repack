@@ -17,6 +17,7 @@
 
 using Mono.Cecil;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -59,6 +60,7 @@ namespace ILRepacking.Steps
                     _repackCopier.CopyCustomAttributes(mod.CustomAttributes, targetAssemblyMainModule.CustomAttributes, _options.AllowMultipleAssemblyLevelAttributes, null);
                 }
                 CleanupAttributes();
+                RemoveAttributes();
             }
             else if (_options.AttributeFile != null)
             {
@@ -72,18 +74,22 @@ namespace ILRepacking.Steps
                 _repackCopier.CopyCustomAttributes(_repackContext.PrimaryAssemblyDefinition.CustomAttributes, targetAssemblyDefinition.CustomAttributes, null);
                 _repackCopier.CopyCustomAttributes(_repackContext.PrimaryAssemblyMainModule.CustomAttributes, targetAssemblyMainModule.CustomAttributes, null);
                 // TODO: should copy Win32 resources, too
-                CleanupAttributes();
+                RemoveAttributes();
             }
             _repackCopier.CopySecurityDeclarations(_repackContext.PrimaryAssemblyDefinition.SecurityDeclarations, targetAssemblyDefinition.SecurityDeclarations, null);
         }
 
-        void CleanupAttributes()
+        private void CleanupAttributes()
         {
             CleanupAttributes(typeof(CompilationRelaxationsAttribute).FullName, x => x.ConstructorArguments.Count == 1 /* TODO && x.ConstructorArguments[0].Value.Equals(1) */);
             CleanupAttributes(typeof(SecurityTransparentAttribute).FullName, _ => true);
             CleanupAttributes(typeof(SecurityCriticalAttribute).FullName, x => x.ConstructorArguments.Count == 0);
             CleanupAttributes(typeof(AllowPartiallyTrustedCallersAttribute).FullName, x => x.ConstructorArguments.Count == 0);
             CleanupAttributes(typeof(SecurityRulesAttribute).FullName, x => x.ConstructorArguments.Count == 0);
+        }
+
+        private void RemoveAttributes()
+        {
             RemoveAttributes<InternalsVisibleToAttribute>(ca =>
             {
                 String name = (string)ca.ConstructorArguments[0].Value;
@@ -133,6 +139,7 @@ namespace ILRepacking.Steps
             {
                 if (cas[i].AttributeType.FullName == attrTypeName && predicate(cas[i]))
                 {
+                    _logger.Verbose($"Removing attribute {attrTypeName}");
                     cas.RemoveAt(i);
                     ret = true;
                     continue;

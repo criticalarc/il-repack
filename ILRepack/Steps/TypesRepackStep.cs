@@ -1,4 +1,5 @@
 ﻿//
+
 // Copyright (c) 2011 Francois Valdy
 // Copyright (c) 2015 Timotei Dolean
 //
@@ -15,12 +16,10 @@
 // limitations under the License.
 //
 
-using System;
 using System.Collections.Generic;
 using Mono.Cecil;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Mono.Collections.Generic;
 
 namespace ILRepacking.Steps
 {
@@ -78,53 +77,92 @@ namespace ILRepacking.Steps
 
             if (definition.BaseType != null)
             {
-                if (whitelistedTypeNames.Contains(definition.BaseType.FullName))
-                {
-                    yield return definition.BaseType;
+                TypeReference type = definition.BaseType;
 
-                    foreach (var baseType in GetExposedTypes(definition.BaseType, whitelistedTypeNames))
+                if (type.IsGenericInstance)
+                {
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var baseType in GetExposedTypes(type, whitelistedTypeNames))
                         yield return baseType;
-                }
 
-                if (definition.BaseType.IsGenericInstance)
-                {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType) definition.BaseType, whitelistedTypeNames))
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                    {
+                        yield return type;
+
+                        foreach (var baseType in GetExposedTypes(type, whitelistedTypeNames))
+                            yield return baseType;
+                    }
                 }
             }
 
             foreach (var iface in definition.Interfaces)
             {
-                if (whitelistedTypeNames.Contains(iface.FullName))
-                    yield return iface;
+                TypeReference type = iface;
 
-                if (iface.IsGenericInstance)
+                if (type.IsGenericInstance)
                 {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType)iface, whitelistedTypeNames))
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                        yield return type;
                 }
             }
 
             foreach (var method in definition.Methods.Where(x => x.IsPublic))
             {
-                if (whitelistedTypeNames.Contains(method.ReturnType.FullName))
-                    yield return method.ReturnType;
+                TypeReference type = method.ReturnType;
 
-                if (method.ReturnType.IsGenericInstance)
+                if (type.IsGenericInstance)
                 {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType)method.ReturnType, whitelistedTypeNames))
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                        yield return type;
                 }
 
                 foreach (var param in method.Parameters)
                 {
-                    if (whitelistedTypeNames.Contains(param.ParameterType.FullName))
-                        yield return param.ParameterType;
+                    TypeReference paramType = param.ParameterType;
 
-                    if (param.ParameterType.IsGenericInstance)
+                    if (paramType.IsGenericInstance)
                     {
-                        foreach (var argument in GetExposedGenericArguments((GenericInstanceType)param.ParameterType, whitelistedTypeNames))
+                        GenericInstanceType genericInstance = (GenericInstanceType)paramType;
+
+                        if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                            yield return genericInstance.ElementType;
+
+                        foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                             yield return argument;
+                    }
+                    else
+                    {
+                        if (whitelistedTypeNames.Contains(paramType.FullName))
+                            yield return paramType;
                     }
                 }
             }
@@ -133,26 +171,44 @@ namespace ILRepacking.Steps
             {
                 if (prop.GetMethod != null && prop.GetMethod.IsPublic)
                 {
-                    if (whitelistedTypeNames.Contains(prop.GetMethod.ReturnType.FullName))
-                        yield return prop.GetMethod.ReturnType;
+                    TypeReference type = prop.GetMethod.ReturnType;
 
-                    if (prop.GetMethod.ReturnType.IsGenericInstance)
+                    if (type.IsGenericInstance)
                     {
-                        foreach (var argument in GetExposedGenericArguments((GenericInstanceType)prop.GetMethod.ReturnType, whitelistedTypeNames))
+                        GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                        if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                            yield return genericInstance.ElementType;
+
+                        foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                             yield return argument;
+                    }
+                    else
+                    {
+                        if (whitelistedTypeNames.Contains(type.FullName))
+                            yield return type;
                     }
                 }
                 else if (prop.SetMethod != null && prop.SetMethod.IsPublic)
                 {
                     foreach (var param in prop.SetMethod.Parameters)
                     {
-                        if (whitelistedTypeNames.Contains(param.ParameterType.FullName))
-                            yield return param.ParameterType;
+                        TypeReference type = param.ParameterType;
 
-                        if (param.ParameterType.IsGenericInstance)
+                        if (type.IsGenericInstance)
                         {
-                            foreach (var argument in GetExposedGenericArguments((GenericInstanceType) param.ParameterType, whitelistedTypeNames))
+                            GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                            if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                                yield return genericInstance.ElementType;
+
+                            foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                                 yield return argument;
+                        }
+                        else
+                        {
+                            if (whitelistedTypeNames.Contains(type.FullName))
+                                yield return type;
                         }
                     }
                 }
@@ -160,13 +216,22 @@ namespace ILRepacking.Steps
 
             foreach (var field in definition.Fields.Where(x => x.IsPublic))
             {
-                if (whitelistedTypeNames.Contains(field.FieldType.FullName))
-                    yield return field.FieldType;
+                TypeReference type = field.FieldType;
 
-                if (field.FieldType.IsGenericInstance)
+                if (type.IsGenericInstance)
                 {
-                    foreach (var argument in GetExposedGenericArguments((GenericInstanceType)field.FieldType, whitelistedTypeNames))
+                    GenericInstanceType genericInstance = (GenericInstanceType)type;
+
+                    if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                        yield return genericInstance.ElementType;
+
+                    foreach (var argument in GetExposedGenericArguments(genericInstance, whitelistedTypeNames))
                         yield return argument;
+                }
+                else
+                {
+                    if (whitelistedTypeNames.Contains(type.FullName))
+                        yield return type;
                 }
             }
         }
@@ -202,27 +267,26 @@ namespace ILRepacking.Steps
         private void RepackTypes(HashSet<string> exposedTypeNames)
         {
             _logger.Info("Processing types");
+
             // merge types, this differs between 'primary' and 'other' assemblies regarding internalizing
 
             foreach (var r in _repackContext.PrimaryAssemblyDefinition.Modules.SelectMany(x => x.Types))
             {
-                _logger.Verbose("- Importing " + r);
+                _logger.Verbose($"- Importing {r} from {r.Module}");
                 _repackImporter.Import(r, _repackContext.TargetAssemblyMainModule.Types, false);
             }
-            foreach (var m in _repackContext.OtherAssemblies.SelectMany(x => x.Modules))
+
+            foreach (var r in _repackContext.OtherAssemblies.SelectMany(x => x.Modules).SelectMany(m => m.Types))
             {
-                foreach (var r in m.Types)
-                {
-                    _logger.Verbose("- Importing " + r);
-                    _repackImporter.Import(r, _repackContext.TargetAssemblyMainModule.Types, !exposedTypeNames.Contains(r.FullName));
-                }
+                _logger.Verbose($"- Importing {r} from {r.Module}");
+                _repackImporter.Import(r, _repackContext.TargetAssemblyMainModule.Types, !exposedTypeNames.Contains(r.FullName));
             }
         }
 
         private void RepackExportedTypes(HashSet<string> exposedTypeNames)
         {
             var targetAssemblyMainModule = _repackContext.TargetAssemblyMainModule;
-            _logger.Info("Processing types");
+            _logger.Info("Processing exported types");
             foreach (var m in _repackContext.MergedAssemblies.SelectMany(x => x.Modules))
             {
                 foreach (var r in m.ExportedTypes)
@@ -230,23 +294,25 @@ namespace ILRepacking.Steps
                     _repackContext.MappingHandler.StoreExportedType(m, r.FullName, CreateReference(r));
                 }
             }
+
             foreach (var r in _repackContext.PrimaryAssemblyDefinition.Modules.SelectMany(x => x.ExportedTypes))
             {
-                _logger.Verbose("- Importing Exported Type" + r);
+                _logger.Verbose($"- Importing Exported Type {r} from {r.Scope}");
                 _repackImporter.Import(r, targetAssemblyMainModule.ExportedTypes, targetAssemblyMainModule);
             }
+
             foreach (var m in _repackContext.OtherAssemblies.SelectMany(x => x.Modules))
             {
                 foreach (var r in m.ExportedTypes)
                 {
                     if (!exposedTypeNames.Contains(r.FullName))
                     {
-                        _logger.Verbose("- Importing Exported Type " + r);
+                        _logger.Verbose($"- Importing Exported Type {r} from {m}");
                         _repackImporter.Import(r, targetAssemblyMainModule.ExportedTypes, targetAssemblyMainModule);
                     }
                     else
                     {
-                        _logger.Verbose("- Skipping Exported Type " + r);
+                        _logger.Verbose($"- Skipping Exported Type {r} from {m}");
                     }
                 }
             }
@@ -257,14 +323,17 @@ namespace ILRepacking.Steps
         /// </summary>
         private bool ShouldInternalize(string typeFullName)
         {
-            if (_repackOptions.ExcludeInternalizeMatches == null)
-            {
-                return _repackOptions.Internalize;
-            }
+            if (!_repackOptions.Internalize)
+                return false;
+
+            if (_repackOptions.ExcludeInternalizeMatches.Count == 0)
+                return true;
+
             string withSquareBrackets = "[" + typeFullName + "]";
             foreach (Regex r in _repackOptions.ExcludeInternalizeMatches)
                 if (r.IsMatch(typeFullName) || r.IsMatch(withSquareBrackets))
                     return false;
+
             return true;
         }
 

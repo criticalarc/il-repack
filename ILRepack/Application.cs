@@ -58,6 +58,7 @@ namespace ILRepacking
             Console.WriteLine(@"Syntax: ILRepack.exe [Options] /out:<path> <path_to_primary> [<other_assemblies> ...]");
             Console.WriteLine(@" - /help              displays this usage");
             Console.WriteLine(@" - /keyfile:<path>    specifies a keyfile to sign the output assembly");
+            Console.WriteLine(@" - /keycontainer:<name> specifies a key container to sign the output assembly");
             Console.WriteLine(@" - /log:<logfile>     enable logging (to a file, if given) (default is disabled)");
             Console.WriteLine(@" - /ver:M.X.Y.Z       target assembly version");
             Console.WriteLine(@" - /union             merges types with identical names into one");

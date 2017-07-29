@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ILRepack.Tests
 {
@@ -226,6 +227,17 @@ namespace ILRepack.Tests
         }
 
         [Test]
+        public void WithOptionKeyContainerSet_WithDelaySign__Parse__NoException()
+        {
+            commandLine.Setup(cmd => cmd.Option("out")).Returns("filename");
+            commandLine.Setup(cmd => cmd.OtherAguments).Returns(new[] { "A", "B", "C" });
+            commandLine.Setup(cmd => cmd.Option("keycontainer")).Returns("containername");
+            commandLine.Setup(cmd => cmd.Modifier("delaysign")).Returns(true);
+            Parse();
+            options.Validate();
+        }
+
+        [Test]
         public void WithAllowMultipleAssign_WithNoCopyAttributes__Parse__ThrowsInvalidOperationException()
         {
             commandLine.Setup(cmd => cmd.Modifier("allowmultiple")).Returns(true);
@@ -265,6 +277,19 @@ namespace ILRepack.Tests
         }
 
         [Test]
+        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "KeyFile does not exist", MatchType = MessageMatch.Contains)]
+        public void WithNoKeyFileEvenWithKeyContainer__ParseProperties__ThrowException()
+        {
+            var inputAssemblies = new List<string> { "A", "B", "C" };
+            commandLine.Setup(cmd => cmd.Option("out")).Returns("filename");
+            commandLine.Setup(cmd => cmd.OtherAguments).Returns(inputAssemblies.ToArray());
+            commandLine.Setup(cmd => cmd.Option("keyfile")).Returns("filename");
+            commandLine.Setup(cmd => cmd.Option("keycontainer")).Returns("containername");
+            Parse();
+            options.Validate();
+        }
+
+        [Test]
         public void WithNoKeyFile__ParseProperties__ReadExcludeInternalizedMatches()
         {
             var inputAssemblies = new List<string> { "A", "B", "C" };
@@ -281,6 +306,27 @@ namespace ILRepack.Tests
             Assert.IsNotEmpty(options.InputAssemblies);
             var pattern = options.ExcludeInternalizeMatches.First();
             Assert.IsTrue(pattern.IsMatch(keyFileLines.First()));
+        }
+
+        [Test]
+        public void CanSetExcludeOptionsWithoutCommandLine()
+        {
+            Parse();
+            var r = new Regex("test");
+            options.ExcludeInternalizeMatches.Add(r);
+            CollectionAssert.AreEqual(new[] { r }, options.ExcludeInternalizeMatches);
+        }
+
+        [Test]
+        public void SettingExcludeFileReadsFromFile()
+        {
+            const string excludeFile = "excludefile";
+            var excludeLines = new List<string> { "ex1", "ex2" };
+            Parse();
+            file.Setup(_ => _.ReadAllLines(excludeFile)).Returns(excludeLines.ToArray());
+            options.ExcludeFile = excludeFile;
+            Assert.AreEqual(excludeFile, options.ExcludeFile);
+            CollectionAssert.AreEqual(excludeLines, options.ExcludeInternalizeMatches.Select(r => r.ToString()));
         }
     }
 }

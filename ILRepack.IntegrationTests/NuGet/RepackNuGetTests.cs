@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Reactive.PlatformServices;
 using System.Text.RegularExpressions;
 using ILRepacking.Steps.SourceServerData;
 
@@ -19,6 +20,7 @@ namespace ILRepack.IntegrationTests.NuGet
         [SetUp]
         public void GenerateTempFolder()
         {
+            PlatformEnlightenmentProvider.Current = new TestsPlatformEnglightenmentProvider();
             tempDirectory = TestHelpers.GenerateTempFolder();
         }
 
@@ -28,30 +30,33 @@ namespace ILRepack.IntegrationTests.NuGet
             TestHelpers.CleanupTempFolder(ref tempDirectory);
         }
 
-        [TestCaseSource(typeof(Data), "Packages")]
+        [TestCaseSource(typeof(Data), nameof(Data.Packages))]
         public void RoundtripNupkg(Package p)
         {
             var count = NuGetHelpers.GetNupkgAssembliesAsync(p)
-            .Do(t => TestHelpers.SaveAs(t.Item2(), tempDirectory, "foo.dll"))
-            .Do(file => RepackFoo(file.Item1))
-            .Do(_ => VerifyTest(new[] { "foo.dll" }))
-            .ToEnumerable().Count();
+                .Do(t => TestHelpers.SaveAs(t.Item2(), tempDirectory, "foo.dll"))
+                .Do(file => RepackFoo(file.Item1))
+                .Do(_ => VerifyTest(new[] { "foo.dll" }))
+                .ToEnumerable().Count();
             Assert.IsTrue(count > 0);
         }
 
         [Category("LongRunning")]
         [Platform(Include = "win")]
-        [TestCaseSource(typeof(Data), "Platforms", Category = "ComplexTests")]
+        [TestCaseSource(typeof(Data), nameof(Data.Platforms), Category = "ComplexTests")]
         public void NupkgPlatform(Platform platform)
         {
-            Observable.ToObservable(platform.Packages)
-            .SelectMany(NuGetHelpers.GetNupkgAssembliesAsync)
-            .Do(lib => TestHelpers.SaveAs(lib.Item2(), tempDirectory, lib.Item1))
-            .Select(lib => Path.GetFileName(lib.Item1))
-            .ToList()
-            .Do(list => RepackPlatform(platform, list))
-            .First();
-            var errors = PeverifyHelper.Peverify(tempDirectory, "test.dll").Do(Console.WriteLine).ToErrorCodes().ToEnumerable();
+            platform.Packages.ToObservable()
+                .SelectMany(NuGetHelpers.GetNupkgAssembliesAsync)
+                .Do(lib => TestHelpers.SaveAs(lib.Item2(), tempDirectory, lib.Item1))
+                .Select(lib => Path.GetFileName(lib.Item1))
+                .ToList()
+                .Do(list => RepackPlatform(platform, list))
+                .Wait();
+            var errors = PeverifyHelper
+                .Peverify(tempDirectory, "test.dll")
+                .Do(Console.WriteLine)
+                .ToErrorCodes().ToEnumerable();
             Assert.IsFalse(errors.Contains(PeverifyHelper.VER_E_STACK_OVERFLOW));
         }
 
@@ -67,13 +72,14 @@ namespace ILRepack.IntegrationTests.NuGet
                 Package.From("Microsoft.Bcl.Async", "1.0.168")
                     .WithArtifact(@"lib\net40\Microsoft.Threading.Tasks.dll"))
                 .WithExtraArgs(@"/targetplatform:v4,C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0");
-            Observable.ToObservable(platform.Packages)
-            .SelectMany(NuGetHelpers.GetNupkgAssembliesAsync)
-            .Do(lib => TestHelpers.SaveAs(lib.Item2(), tempDirectory, lib.Item1))
-            .Select(lib => Path.GetFileName(lib.Item1))
-            .ToList()
-            .Do(list => RepackPlatform(platform, list))
-            .First();
+
+            platform.Packages.ToObservable()
+                .SelectMany(NuGetHelpers.GetNupkgAssembliesAsync)
+                .Do(lib => TestHelpers.SaveAs(lib.Item2(), tempDirectory, lib.Item1))
+                .Select(lib => Path.GetFileName(lib.Item1))
+                .ToList()
+                .Do(list => RepackPlatform(platform, list))
+                .First();
             var errors = PeverifyHelper.Peverify(tempDirectory, "test.dll").Do(Console.WriteLine).ToErrorCodes().ToEnumerable();
             Assert.IsFalse(errors.Contains(PeverifyHelper.VER_E_TOKEN_RESOLVE));
             Assert.IsFalse(errors.Contains(PeverifyHelper.VER_E_TYPELOAD));
@@ -89,13 +95,13 @@ namespace ILRepack.IntegrationTests.NuGet
                 Package.From("Splat", "1.6.2")
                     .WithArtifact(@"lib\net45\Splat.dll"))
                 .WithExtraArgs("/keyfile:../../../ILRepack/ILRepack.snk");
-            Observable.ToObservable(platform.Packages)
-            .SelectMany(NuGetHelpers.GetNupkgAssembliesAsync)
-            .Do(lib => TestHelpers.SaveAs(lib.Item2(), tempDirectory, lib.Item1))
-            .Select(lib => Path.GetFileName(lib.Item1))
-            .ToList()
-            .Do(list => RepackPlatform(platform, list))
-            .First();
+            platform.Packages.ToObservable()
+                .SelectMany(NuGetHelpers.GetNupkgAssembliesAsync)
+                .Do(lib => TestHelpers.SaveAs(lib.Item2(), tempDirectory, lib.Item1))
+                .Select(lib => Path.GetFileName(lib.Item1))
+                .ToList()
+                .Do(list => RepackPlatform(platform, list))
+                .Wait();
             var errors = PeverifyHelper.Peverify(tempDirectory, "test.dll").Do(Console.WriteLine).ToErrorCodes().ToEnumerable();
             Assert.IsFalse(errors.Contains(PeverifyHelper.META_E_CA_FRIENDS_SN_REQUIRED));
         }
@@ -180,7 +186,8 @@ namespace ILRepack.IntegrationTests.NuGet
 
         void RepackPlatform(Platform platform, IList<string> list)
         {
-            Assert.IsTrue(list.Count >= platform.Packages.Count());
+            Assert.IsTrue(list.Count >= platform.Packages.Count(), 
+                "There should be at least the same number of .dlls as the number of packages");
             Console.WriteLine("Merging {0}", string.Join(",",list));
             TestHelpers.DoRepackForCmd(new []{"/out:"+Tmp("test.dll"), "/lib:"+tempDirectory}.Concat(platform.Args).Concat(list.Select(Tmp).OrderBy(x => x)));
             Assert.IsTrue(File.Exists(Tmp("test.dll")));
@@ -189,15 +196,6 @@ namespace ILRepack.IntegrationTests.NuGet
         string Tmp(string file)
         {
             return Path.Combine(tempDirectory, file);
-        }
-
-        static IEnumerable<string> GetPortable(string lib)
-        {
-            if (lib.StartsWith(@"lib")) lib = lib.Substring(4);
-            var dirName = Path.GetDirectoryName(lib);
-            if (string.IsNullOrEmpty(dirName) || !dirName.StartsWith(@"portable-")) return Enumerable.Empty<string>();
-            dirName = dirName.Substring(9);
-            return new Regex(@"\+|%2[bB]").Split(dirName);
         }
 
         void VerifyTest(IEnumerable<string> mergedLibraries)
