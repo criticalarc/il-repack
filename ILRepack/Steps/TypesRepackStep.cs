@@ -56,13 +56,20 @@ namespace ILRepacking.Steps
             {
                 foreach (var argument in ((GenericInstanceType) reference).GenericArguments)
                 {
-                    if (!argument.IsGenericParameter)
+                    if (argument.IsGenericInstance)
                     {
-                        if (whitelistedTypeNames.Contains(argument.FullName))
-                            yield return argument;
+                        GenericInstanceType genericInstance = (GenericInstanceType) argument;
+
+                        if (whitelistedTypeNames.Contains(genericInstance.ElementType.FullName))
+                            yield return genericInstance.ElementType;
 
                         foreach (var argument2 in GetExposedGenericArguments(argument, whitelistedTypeNames))
                             yield return argument2;
+                    }
+                    else
+                    {
+                        if (whitelistedTypeNames.Contains(argument.FullName))
+                            yield return argument;
                     }
                 }
             }
